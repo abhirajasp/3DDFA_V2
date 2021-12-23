@@ -7,7 +7,7 @@ import argparse
 import cv2
 import yaml
 
-from FaceBoxes import FaceBoxes
+# from FaceBoxes import FaceBoxes
 from TDDFA import TDDFA
 from utils.render import render
 #from utils.render_ctypes import render  # faster
@@ -29,34 +29,36 @@ def main(args):
         os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
         os.environ['OMP_NUM_THREADS'] = '4'
 
-        from FaceBoxes.FaceBoxes_ONNX import FaceBoxes_ONNX
+        # from FaceBoxes.FaceBoxes_ONNX import FaceBoxes_ONNX
         from TDDFA_ONNX import TDDFA_ONNX
 
-        face_boxes = FaceBoxes_ONNX()
+        # face_boxes = FaceBoxes_ONNX()
         tddfa = TDDFA_ONNX(**cfg)
     else:
         gpu_mode = args.mode == 'gpu'
         tddfa = TDDFA(gpu_mode=gpu_mode, **cfg)
-        face_boxes = FaceBoxes()
+        # face_boxes = FaceBoxes()
 
     # Given a still image path and load to BGR channel
     img = cv2.imread(args.img_fp)
 
     # Detect faces, get 3DMM params and roi boxes
-    boxes = face_boxes(img)
-    n = len(boxes)
-    if n == 0:
-        print(f'No face detected, exit')
-        sys.exit(-1)
-    print(f'Detect {n} faces')
+    # boxes = face_boxes(img)
+    # n = len(boxes)
+    # if n == 0:
+        # print(f'No face detected, exit')
+        # sys.exit(-1)
+    # print(f'Detect {n} faces')
 
-    param_lst, roi_box_lst = tddfa(img, boxes)
+    param_lst, roi_box_lst = tddfa(img)
 
     # Visualization and serialization
     dense_flag = args.opt in ('2d_dense', '3d', 'depth', 'pncc', 'uv_tex', 'ply', 'obj')
     old_suffix = get_suffix(args.img_fp)
     new_suffix = f'.{args.opt}' if args.opt in ('ply', 'obj') else '.jpg'
-
+    # new_suffix = args.opt
+    # if new_suffix not in ('ply', 'obj'):
+    #     new_suffix = '.jpg'
     wfp = f'examples/results/{args.img_fp.split("/")[-1].replace(old_suffix, "")}_{args.opt}' + new_suffix
 
     ver_lst = tddfa.recon_vers(param_lst, roi_box_lst, dense_flag=dense_flag)
@@ -69,7 +71,7 @@ def main(args):
         render(img, ver_lst, tddfa.tri, alpha=0.6, show_flag=args.show_flag, wfp=wfp)
     elif args.opt == 'depth':
         # if `with_bf_flag` is False, the background is black
-        depth(img, ver_lst, tddfa.tri, show_flag=args.show_flag, wfp=wfp, with_bg_flag=True)
+        depth(img, ver_lst, tddfa.tri, show_flag=args.show_flag, wfp=wfp, with_bg_flag=False)
     elif args.opt == 'pncc':
         pncc(img, ver_lst, tddfa.tri, show_flag=args.show_flag, wfp=wfp, with_bg_flag=True)
     elif args.opt == 'uv_tex':
@@ -88,10 +90,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='The demo of still image of 3DDFA_V2')
     parser.add_argument('-c', '--config', type=str, default='configs/mb1_120x120.yml')
     parser.add_argument('-f', '--img_fp', type=str, default='examples/inputs/trump_hillary.jpg')
-    parser.add_argument('-m', '--mode', type=str, default='cpu', help='gpu or cpu mode')
-    parser.add_argument('-o', '--opt', type=str, default='2d_sparse',
+    parser.add_argument('-m', '--mode', type=str, default='gpu', help='gpu or cpu mode')
+    parser.add_argument('-o', '--opt', type=str, default='depth',
                         choices=['2d_sparse', '2d_dense', '3d', 'depth', 'pncc', 'uv_tex', 'pose', 'ply', 'obj'])
-    parser.add_argument('--show_flag', type=str2bool, default='true', help='whether to show the visualization result')
+    parser.add_argument('--show_flag', type=str2bool, default='False', help='whether to show the visualization result')
     parser.add_argument('--onnx', action='store_true', default=False)
 
     args = parser.parse_args()
