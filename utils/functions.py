@@ -101,16 +101,16 @@ def parse_roi_box_from_bbox(bbox):
 def parse_roi_box_from_cropped_img(img):
     height, width, channels = img.shape
     left, top, right, bottom = 0, 0, width, height
-    old_size = (right - left + bottom - top) / 2
-    center_x = right - (right - left) / 2.0
-    center_y = bottom - (bottom - top) / 2.0 + old_size * 0.14
-    size = int(old_size * 1.58)
+    # old_size = (right - left + bottom - top) / 2
+    # center_x = right - (right - left) / 2.0
+    # center_y = bottom - (bottom - top) / 2.0 + old_size * 0.14
+    # size = int(old_size * 1.58)
 
     roi_box = [0] * 4
-    roi_box[0] = center_x - size / 2
-    roi_box[1] = center_y - size / 2
-    roi_box[2] = roi_box[0] + size
-    roi_box[3] = roi_box[1] + size
+    roi_box[0] = 0
+    roi_box[1] = 0
+    roi_box[2] = width
+    roi_box[3] = height
 
     return roi_box
 

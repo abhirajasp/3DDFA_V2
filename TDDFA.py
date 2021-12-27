@@ -101,8 +101,9 @@ class TDDFA(object):
 
         roi_box_lst.append(roi_box)
         # img = crop_img(img_ori, roi_box)
-
-        img = cv2.resize(img, dsize=(self.size, self.size), interpolation=cv2.INTER_LINEAR)
+        img = img_ori
+        cv2.imwrite("x.jpg", img)
+        # img = cv2.resize(img, dsize=(self.size, self.size), interpolation=cv2.INTER_LINEAR)
         inp = self.transform(img).unsqueeze(0)
 
         if self.gpu_mode:
