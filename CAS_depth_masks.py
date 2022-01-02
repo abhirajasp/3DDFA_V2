@@ -35,7 +35,40 @@ def read_image(image_path):
     crop_path = image_path[:-4]+"_crop"+image_path[-4:]
     wfp = image_path[:-4]+"_depth_3DDFA"+image_path[-4:]
     img = cv2.imread(crop_path)
-    return img, wfp
+    real_h,real_w,c = img.shape
+    assert os.path.exists(image_path[:-4] + '_BB.txt'),'path not exists' + ' ' + image_path
+    crop_path = image_path[:-4]+"_crop"+image_path[-4:]
+    if os.path.exists(crop_path):
+        return None, None, None
+    with open(image_path[:-4] + '_BB.txt','r') as f:
+        material = f.readline()
+        try:
+            x,y,w,h,score = material.strip().split(' ')
+        except:
+            logging.info('Bounding Box of' + ' ' + image_path + ' ' + 'is wrong')   
+
+        try:
+            w = int(float(w))
+            h = int(float(h))
+            x = int(float(x))
+            y = int(float(y))
+            w = int(w*(real_w / 224))
+            h = int(h*(real_h / 224))
+            x = int(x*(real_w / 224))
+            y = int(y*(real_h / 224))
+
+            # Crop face based on its bounding box
+            y1 = 0 if y < 0 else y
+            x1 = 0 if x < 0 else x 
+            y2 = real_h if y1 + h > real_h else y + h
+            x2 = real_w if x1 + w > real_w else x + w
+            boxes = [[x1, y1, x2, y2, 100.0]]
+            # img = img[y1:y2,x1:x2,:]
+
+        except:
+            logging.info('Cropping Bounding Box of' + ' ' + image_path + ' ' + 'goes wrong')   
+
+    return img, wfp, boxes
 
 def main(args):
     cfg = yaml.load(open(args.config), Loader=yaml.SafeLoader)
@@ -71,11 +104,14 @@ def main(args):
         if n==5:
             break
         try:
+            n += 1
             print(image_id)
             print(n)
-            img, wfp = read_image(image_id)
-            n += 1
-            param_lst, roi_box_lst = tddfa(img)
+            img, wfp, boxes = read_image(image_id)
+            if img is None:
+                continue
+
+            param_lst, roi_box_lst = tddfa(img, boxes)
 
             # Visualization and serialization
             # new_suffix = args.opt

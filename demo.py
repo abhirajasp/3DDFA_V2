@@ -6,6 +6,7 @@ import sys
 import argparse
 import cv2
 import yaml
+from pprint import pprint as pprint
 
 from FaceBoxes import FaceBoxes
 from TDDFA import TDDFA
@@ -37,20 +38,25 @@ def main(args):
     else:
         gpu_mode = args.mode == 'gpu'
         tddfa = TDDFA(gpu_mode=gpu_mode, **cfg)
-        # face_boxes = FaceBoxes()
+        face_boxes = FaceBoxes()
 
     # Given a still image path and load to BGR channel
     img = cv2.imread(args.img_fp)
 
     # Detect faces, get 3DMM params and roi boxes
-    # boxes = face_boxes(img)
-    # n = len(boxes)
-    # if n == 0:
-        # print(f'No face detected, exit')
-        # sys.exit(-1)
-    # print(f'Detect {n} faces')
+    boxes = face_boxes(img)
+    pprint(boxes)
+    pprint(img.shape)
+    # pprint()
 
-    param_lst, roi_box_lst = tddfa(img)
+    n = len(boxes)
+    if n == 0:
+        print(f'No face detected, exit')
+        sys.exit(-1)
+    print(f'Detect {n} faces')
+
+    # param_lst, roi_box_lst = tddfa(img)
+    param_lst, roi_box_lst = tddfa(img, boxes)
 
     # Visualization and serialization
     dense_flag = args.opt in ('2d_dense', '3d', 'depth', 'pncc', 'uv_tex', 'ply', 'obj')

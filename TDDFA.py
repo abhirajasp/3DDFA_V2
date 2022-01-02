@@ -13,10 +13,10 @@ import torch.backends.cudnn as cudnn
 import models
 from bfm import BFMModel
 from utils.io import _load
-# from utils.functions import (
-#     crop_img, parse_roi_box_from_bbox, parse_roi_box_from_landmark,
-# )
-from utils.functions import parse_roi_box_from_cropped_img
+from utils.functions import (
+    crop_img, parse_roi_box_from_bbox, parse_roi_box_from_landmark,
+)
+#from utils.functions import parse_roi_box_from_cropped_img
 from utils.tddfa_util import (
     load_model, _parse_param, similar_transform,
     ToTensorGjz, NormalizeGjz
@@ -77,7 +77,7 @@ class TDDFA(object):
 
         # print('param_mean and param_srd', self.param_mean, self.param_std)
 
-    def __call__(self, img_ori, **kvs):
+    def __call__(self, img_ori, objs, **kvs):
         """The main call of TDDFA, given image and box / landmark, return 3DMM params and roi_box
         :param img_ori: the input image
         :param objs: the list of box or landmarks
@@ -89,40 +89,89 @@ class TDDFA(object):
         roi_box_lst = []
 
         # crop_policy = kvs.get('crop_policy', 'box')
-        # for obj in objs:
-        #     if crop_policy == 'box':
-        #         # by face box
-        roi_box = parse_roi_box_from_cropped_img(img_ori)
-        #     elif crop_policy == 'landmark':
-        #         # by landmarks
-        #         roi_box = parse_roi_box_from_landmark(obj)
-        #     else:
-        #         raise ValueError(f'Unknown crop policy {crop_policy}')
+        crop_policy = 'box'
+        for obj in objs:
+            if crop_policy == 'box':
+                # by face box
+                roi_box = parse_roi_box_from_bbox(obj)
+            elif crop_policy == 'landmark':
+                # by landmarks
+                roi_box = parse_roi_box_from_landmark(obj)
+            else:
+                raise ValueError(f'Unknown crop policy {crop_policy}')
 
-        roi_box_lst.append(roi_box)
-        # img = crop_img(img_ori, roi_box)
-        img = img_ori
-        cv2.imwrite("x.jpg", img)
-        # img = cv2.resize(img, dsize=(self.size, self.size), interpolation=cv2.INTER_LINEAR)
-        inp = self.transform(img).unsqueeze(0)
+            roi_box_lst.append(roi_box)
+            img = crop_img(img_ori, roi_box)
+            img = cv2.resize(img, dsize=(self.size, self.size), interpolation=cv2.INTER_LINEAR)
+            inp = self.transform(img).unsqueeze(0)
 
-        if self.gpu_mode:
-            inp = inp.cuda(device=self.gpu_id)
+            if self.gpu_mode:
+                inp = inp.cuda(device=self.gpu_id)
 
-        if kvs.get('timer_flag', False):
-            end = time.time()
-            param = self.model(inp)
-            elapse = f'Inference: {(time.time() - end) * 1000:.1f}ms'
-            print(elapse)
-        else:
-            param = self.model(inp)
+            if kvs.get('timer_flag', False):
+                end = time.time()
+                param = self.model(inp)
+                elapse = f'Inference: {(time.time() - end) * 1000:.1f}ms'
+                print(elapse)
+            else:
+                param = self.model(inp)
 
-        param = param.squeeze().cpu().numpy().flatten().astype(np.float32)
-        param = param * self.param_std + self.param_mean  # re-scale
-        # print('output', param)
-        param_lst.append(param)
+            param = param.squeeze().cpu().numpy().flatten().astype(np.float32)
+            param = param * self.param_std + self.param_mean  # re-scale
+            # print('output', param)
+            param_lst.append(param)
 
         return param_lst, roi_box_lst
+
+
+    # def __call__(self, img_ori, **kvs):
+    #     """The main call of TDDFA, given image and box / landmark, return 3DMM params and roi_box
+    #     :param img_ori: the input image
+    #     :param objs: the list of box or landmarks
+    #     :param kvs: options
+    #     :return: param list and roi_box list
+    #     """
+    #     # Crop image, forward to get the param
+    #     param_lst = []
+    #     roi_box_lst = []
+
+    #     # crop_policy = kvs.get('crop_policy', 'box')
+    #     # for obj in objs:
+    #     #     if crop_policy == 'box':
+    #     #         # by face box
+    #     roi_box = parse_roi_box_from_cropped_img(img_ori)
+    #     #     elif crop_policy == 'landmark':
+    #     #         # by landmarks
+    #     #         roi_box = parse_roi_box_from_landmark(obj)
+    #     #     else:
+    #     #         raise ValueError(f'Unknown crop policy {crop_policy}')
+
+    #     roi_box_lst.append(roi_box)
+    #     img = crop_img(img_ori, roi_box)
+    #     img = img_ori
+    #     #cv2.imwrite("x.jpg", img)
+    #     img = cv2.resize(img, dsize=(self.size, self.size), interpolation=cv2.INTER_LINEAR)
+    #     inp = self.transform(img).unsqueeze(0)
+
+    #     if self.gpu_mode:
+    #         inp = inp.cuda(device=self.gpu_id)
+
+    #     if kvs.get('timer_flag', False):
+    #         end = time.time()
+    #         param = self.model(inp)
+    #         elapse = f'Inference: {(time.time() - end) * 1000:.1f}ms'
+    #         print(elapse)
+    #     else:
+    #         param = self.model(inp)
+
+    #     param = param.squeeze().cpu().numpy().flatten().astype(np.float32)
+    #     param = param * self.param_std + self.param_mean  # re-scale
+    #     # print('output', param)
+    #     param_lst.append(param)
+
+    #     return param_lst, roi_box_lst
+
+
 
     def recon_vers(self, param_lst, roi_box_lst, **kvs):
         dense_flag = kvs.get('dense_flag', False)
