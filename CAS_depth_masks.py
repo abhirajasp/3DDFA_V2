@@ -6,6 +6,7 @@ import sys
 import argparse
 import cv2
 import yaml
+import os
 import json
 # from FaceBoxes import FaceBoxes
 from TDDFA import TDDFA
@@ -30,16 +31,18 @@ def read_image(image_path):
         - image: Required image.
     """
     LOCAL_ROOT = '/frdata/CAS/CELEBA_SPOOF_DATASET/CelebA_Spoof/'
-    image_path = LOCAL_ROOT + image_path
+    # image_path = LOCAL_ROOT + image_path
 
     crop_path = image_path[:-4]+"_crop"+image_path[-4:]
     wfp = image_path[:-4]+"_depth_3DDFA"+image_path[-4:]
-    img = cv2.imread(crop_path)
+    img = cv2.imread(image_path)
+    if img is None:
+        print("Image None!!")
     real_h,real_w,c = img.shape
     assert os.path.exists(image_path[:-4] + '_BB.txt'),'path not exists' + ' ' + image_path
     crop_path = image_path[:-4]+"_crop"+image_path[-4:]
-    if os.path.exists(crop_path):
-        return None, None, None
+    # if os.path.exists(crop_path):
+    #     return None, None, None
     with open(image_path[:-4] + '_BB.txt','r') as f:
         material = f.readline()
         try:
@@ -99,7 +102,10 @@ def main(args):
     #Batch_size = 1024
     #logging.info("Batch_size=, {}".format(Batch_size))
     n=0
+    # image_list = ['/media/zpartialartist/Shared/JioVSE_color/JioFAS/3DDFA_V2/5966/spoof/497050.png']
     for idx,image_id in enumerate(image_list):
+    # for image_id in (image_list):
+        print("image_id = ", image_id)
         # get image from local file
         if n==5:
             break
@@ -109,6 +115,7 @@ def main(args):
             print(n)
             img, wfp, boxes = read_image(image_id)
             if img is None:
+                print("Nones recieved in read_image")
                 continue
 
             param_lst, roi_box_lst = tddfa(img, boxes)
